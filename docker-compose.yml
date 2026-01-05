@@ -1,0 +1,62 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: course_registration_db
+    restart: always
+    environment:
+      POSTGRES_USER: courseadmin
+      POSTGRES_PASSWORD: coursepass123
+      POSTGRES_DB: course_registration
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - course_network
+
+  # Node.js Backend API
+  backend:
+    build: ./backend
+    container_name: course_registration_backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: courseadmin
+      DB_PASSWORD: coursepass123
+      DB_NAME: course_registration
+      JWT_SECRET: your_super_secret_jwt_key_change_this_in_production
+    depends_on:
+      - db
+    networks:
+      - course_network
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  # React Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: course_registration_frontend
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - course_network
+
+volumes:
+  postgres_data:
+
+networks:
+  course_network:
+    driver: bridge
